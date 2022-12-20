@@ -1,11 +1,8 @@
--- Add a new column to the movies table
-ALTER TABLE movies
-    ADD COLUMN version_uuid UUID;
+alter table movies
+    alter column version type text;
 
--- Drop the old version column
-ALTER TABLE movies
-    DROP COLUMN version;
+alter table movies
+    alter column version set default uuid_generate_v4();
 
--- Rename the new version_uuid column to version
-ALTER TABLE movies
-    RENAME COLUMN version_uuid TO version;
+alter table movies
+    alter column version type uuid using version::uuid;

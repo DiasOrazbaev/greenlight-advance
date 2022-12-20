@@ -1,8 +1,10 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"log"
 	"net/http"
 	"os"
@@ -16,6 +18,12 @@ const version = "1.0.0"
 type config struct {
 	port int
 	env  string
+	db   struct {
+		dsn          string
+		maxOpenConns int
+		maxIdleConns int
+		maxIdleTime  int
+	}
 }
 
 // Define an application struct to hold dependencides for our HTTP handlers, helpers, and
@@ -23,6 +31,7 @@ type config struct {
 type application struct {
 	config config
 	logger *log.Logger
+	pool   *pgxpool.Pool
 }
 
 func main() {
@@ -34,6 +43,9 @@ func main() {
 	// corresponding flags are provided.
 	flag.IntVar(&cfg.port, "port", 4000, "API server port")
 	flag.StringVar(&cfg.env, "env", "development", "Enviroment (development|staging|production")
+	flag.StringVar(&cfg.db.dsn, "db-dsn", os.Getenv("GREENLIGHT_DB_DSN"), "postgres dsn for connection")
+	flag.IntVar(&cfg.db.maxOpenConns, "db-max-open-conn", 100, "max open connection of pgx connection pool")
+	flag.IntVar(&cfg.db.maxIdleTime, "db-max-idle-time", 30, "max idle time")
 
 	flag.Parse()
 
@@ -41,10 +53,16 @@ func main() {
 	// with the current date and time.
 	logger := log.New(os.Stdout, "", log.Ldate|log.Ltime)
 
+	pool, err := pgxpool.New(context.Background(), cfg.db.dsn)
+	if err != nil {
+		logger.Fatal(err.Error())
+	}
+
 	// Declare an instance of the application struct, containing the config struct and the logger.
 	app := &application{
 		config: cfg,
 		logger: logger,
+		pool:   pool,
 	}
 
 	// Use the httprouter instance returned by app.routes as the server handler.
@@ -58,6 +76,7 @@ func main() {
 
 	// Start the HTTP server.
 	logger.Printf("starting the %s server on %s", cfg.env, srv.Addr)
-	err := srv.ListenAndServe()
-	logger.Fatal(err)
+	if err = srv.ListenAndServe(); err != nil {
+		logger.Fatal(err)
+	}
 }
