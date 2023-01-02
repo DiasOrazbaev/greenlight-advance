@@ -3,24 +3,31 @@ package data
 import (
 	"database/sql"
 	"errors"
+	"log"
+	"os"
 )
 
-// ErrRecordNotFound Define a custom ErrRecordNotFound error. We'll return this from our Get() method when
-// looking up a movie that doesn't exist in our database.
 var (
+	// ErrRecordNotFound is returned when a movie record doesn't exist in database.
 	ErrRecordNotFound = errors.New("record not found")
+
+	// ErrEditConflict is returned when a there is a data race, and we have an edit conflict.
+	ErrEditConflict = errors.New("edit conflict")
 )
 
-// Models Create a Models struct which wraps the MovieModel. We'll add other models to this,
-// like a UserModel and PermissionModel, as our build progresses.
+// Models struct is a single convenient container to hold and represent all our database models.
 type Models struct {
 	Movies MovieModel
 }
 
-// NewModels For ease of use, we also add a New() method which returns a Models struct containing
-// the initialized MovieModel.
 func NewModels(db *sql.DB) Models {
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	return Models{
-		Movies: MovieModel{DB: db},
+		Movies: MovieModel{
+			DB:       db,
+			InfoLog:  infoLog,
+			ErrorLog: errorLog,
+		},
 	}
 }

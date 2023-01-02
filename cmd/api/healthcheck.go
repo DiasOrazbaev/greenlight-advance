@@ -20,4 +20,5 @@ func (app *application) healthcheckHandler(w http.ResponseWriter, r *http.Reques
 		app.serverErrorResponse(w, r, err)
 		return
 	}
+	return
 }

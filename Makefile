@@ -1,3 +1,5 @@
+DSN=postgres://postgresql:password@localhost:1234/greenlight?sslmode=disable
+
 run:
 	go run cmd/api/*.go
 
