@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"github.com/DiasOrazbaev/greenlight/internal/data"
 	"github.com/DiasOrazbaev/greenlight/internal/jsonlog"
+	"github.com/DiasOrazbaev/greenlight/internal/mailer"
 	"log"
 	"net/http"
 	"os"
@@ -30,6 +31,13 @@ type config struct {
 		maxIdleConns int
 		maxIdleTime  string
 	}
+	smtp struct {
+		host     string
+		port     int
+		username string
+		password string
+		sender   string
+	}
 }
 
 // Define an application struct to hold dependencies for our HTTP handlers, helpers, and
@@ -38,6 +46,7 @@ type application struct {
 	config config
 	logger *jsonlog.Logger
 	models data.Models
+	mailer mailer.Mailer
 }
 
 func main() {
@@ -62,6 +71,12 @@ func main() {
 		"PostgreSQL max open idle connections")
 	flag.StringVar(&cfg.db.maxIdleTime, "db-max-idle-time", "15m",
 		"PostgreSQL max connection idle time")
+
+	flag.StringVar(&cfg.smtp.host, "smtp-host", "smtp.office365.com", "SMTP host")
+	flag.IntVar(&cfg.smtp.port, "smtp-port", 587, "SMTP port")
+	flag.StringVar(&cfg.smtp.username, "smtp-username", "211280@astanait.edu.kz", "SMTP username")
+	flag.StringVar(&cfg.smtp.password, "smtp-password", "<my_password>", "SMTP password")
+	flag.StringVar(&cfg.smtp.sender, "smtp-sender", "Greenlight <211280@astanait.edu.kz>", "SMTP sender")
 
 	flag.Parse()
 
@@ -92,6 +107,7 @@ func main() {
 		config: cfg,
 		logger: logger,
 		models: data.NewModels(db),
+		mailer: mailer.New(cfg.smtp.host, cfg.smtp.port, cfg.smtp.username, cfg.smtp.password, cfg.smtp.sender),
 	}
 
 	// Use the httprouter instance returned by app.routes as the server handler.

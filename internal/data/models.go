@@ -3,8 +3,6 @@ package data
 import (
 	"database/sql"
 	"errors"
-	"log"
-	"os"
 )
 
 var (
@@ -15,19 +13,14 @@ var (
 	ErrEditConflict = errors.New("edit conflict")
 )
 
-// Models struct is a single convenient container to hold and represent all our database models.
 type Models struct {
 	Movies MovieModel
+	Users  UserModel // Add a new Users field.
 }
 
 func NewModels(db *sql.DB) Models {
-	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
-	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
 	return Models{
-		Movies: MovieModel{
-			DB:       db,
-			InfoLog:  infoLog,
-			ErrorLog: errorLog,
-		},
+		Movies: MovieModel{DB: db},
+		Users:  UserModel{DB: db}, // Initialize a new UserModel instance.
 	}
 }

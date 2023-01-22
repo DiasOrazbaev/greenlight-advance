@@ -1,4 +1,4 @@
-DSN=postgres://postgresql:password@localhost:1234/greenlight?sslmode=disable
+DSN=postgres://postgres:150903@localhost:5432/greenlight?sslmode=disable
 
 run:
 	go run cmd/api/*.go
@@ -10,6 +10,6 @@ down:
 	migrate -path migrations -database "${DSN}" -verbose down
 
 build:
-	go build -o bin cmd/api/*.go
+	go build -o bin\main.exe cmd/api/
 
 .PHONY: run up build

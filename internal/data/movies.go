@@ -6,7 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/DiasOrazbaev/greenlight/internal/validator"
+	"github.com/jackc/pgx/v5"
 	"log"
+	"strings"
 	"time"
 )
 
@@ -58,51 +60,53 @@ func (m MovieModel) Insert(movie *Movie) error {
 // Get fetches a record from the movies table and returns the corresponding Movie struct.
 // It cancels the query call if the SQL query does not finish within 3 seconds.
 func (m MovieModel) Get(id int64) (*Movie, error) {
-	// The PostgreSQL bigserial type that we're using for the movie ID starts auto-incrementing
-	// at 1 by default, so we know that no movies will have ID values less tan that.
-	// To avoid making an unnecessary database call,
-	// we take a shortcut and return an ErrRecordNotFound error straight away.
+	// The PostgreSQL bigserial type that we're using for the movie ID starts
+	// auto-incrementing at 1 by default, so we know that no movies will have ID values
+	// less than that. To avoid making an unnecessary database call, we take a shortcut
+	// and return an ErrRecordNotFound error straight away.
 	if id < 1 {
 		return nil, ErrRecordNotFound
 	}
-
+	// Define the SQL query for retrieving the movie data.
 	query := `
-		SELECT id, created_at, title, year, runtime, genres, version
-        FROM movies
- 		WHERE id = $1
- 		`
-
+	SELECT id, created_at, title, year, runtime, genres, version
+	FROM movies
+	WHERE id = $1`
+	// Declare a Movie struct to hold the data returned by the query.
 	var movie Movie
-
-	// Use the context.WithTimeout() function to create a context.Context which carries a 3-second
-	// timeout deadline. Note, that we're using the empty context.Background() as the
-	// 'parent' context.
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	// Defer cancel to make sure that we cancel the context before the Get() method returns
-	defer cancel()
-
-	// Use the QueryRowContext() method to execute the query, passing in the context with the
-	// deadline ctx as the first argument.
-	err := m.DB.QueryRowContext(ctx, query, id).Scan(
+	// Execute the query using the QueryRow() method, passing in the provided id value
+	// as a placeholder parameter, and scan the response data into the fields of the
+	// Movie struct. Importantly, notice that we need to convert the scan target for the
+	// genres column using the pq.Array() adapter function again.
+	//ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	var some sql.NullString
+	//defer cancel()
+	err := m.DB.QueryRow(query, id).Scan(
 		&movie.ID,
 		&movie.CreatedAt,
 		&movie.Title,
 		&movie.Year,
 		&movie.Runtime,
-		&movie.Genres,
+		&some,
 		&movie.Version)
 
-	// Handle any errors. If there was no matching movie found, Scan() will return a sql.ErrNoRows
-	// error. We check for this and return our custom ErrRecordNotFound error instead.
+	log.Println("some:", some.String)
+	genders := strings.Split(some.String[1:][:len(some.String)-2], ",")
+	log.Println("genders:", genders)
+	movie.Genres = genders
+
+	// Handle any errors. If there was no matching movie found, Scan() will return
+	// a sql.ErrNoRows error. We check for this and return our custom ErrRecordNotFound
+	// error instead.
 	if err != nil {
 		switch {
-		case errors.Is(err, sql.ErrNoRows):
+		case errors.Is(err, pgx.ErrNoRows):
 			return nil, ErrRecordNotFound
 		default:
 			return nil, err
 		}
 	}
-
+	// Otherwise, return a pointer to the Movie struct.
 	return &movie, nil
 }
 
